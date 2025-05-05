@@ -1,6 +1,8 @@
 ## Game effect
+example_1
 ![image](https://github.com/user-attachments/assets/7aafedbd-f25d-4a49-82bd-7177b875ffb6)
-
+example_2
+![1746466902063](https://github.com/user-attachments/assets/8733c08f-eab8-46bd-b24a-d8c25642cd56)
 
 
 
