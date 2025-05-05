@@ -18,7 +18,7 @@ Follow these steps to get started quickly:
 ![image](https://github.com/user-attachments/assets/3ed7bbfb-c33d-4d72-a09e-0c7d170d6a2f)
 
 
-5. **Enjoy your LLMs game!**
+3. **Enjoy your LLMs game!**
    ```bash
    python main.py # run the server and click the http://127.0.0.1:5000 
    
