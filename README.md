@@ -21,9 +21,5 @@ Follow these steps to get started quickly:
 3. **Enjoy your LLMs game!**
    ```bash
    python main.py # run the server and click the http://127.0.0.1:5000 
+
    
-
-
-
- 
-
