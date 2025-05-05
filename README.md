@@ -14,7 +14,7 @@ Follow these steps to get started quickly:
    ```bash
    pip install -r requirements.txt
 
-   #Fill in the corresponding API_KEY using the silicon-based flow API_KEY(can be obtained through https://cloud.siliconflow.cn/account/ak)
+   #Fill in the corresponding API_KEY (main.py) using the silicon-based flow API_KEY(can be obtained through https://cloud.siliconflow.cn/account/ak)
 ![image](https://github.com/user-attachments/assets/3ed7bbfb-c33d-4d72-a09e-0c7d170d6a2f)
 
 
