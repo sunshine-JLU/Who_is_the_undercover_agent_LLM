@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大模型版 - 谁是卧底</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .player-bubble {
+            animation: fadeIn 0.5s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* 可调整大小的对话框 */
+        .resizable {
+            resize: vertical;
+            overflow: auto;
+            min-height: 200px;
+        }
+        /* 自定义滚动条 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">大模型版 - 谁是卧底</h1>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 游戏设置面板 -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">游戏设置</h2>
+
+                <div id="player-settings" class="mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-medium">玩家设置</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="addPlayer()" class="px-3 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200">+</button>
+                            <button onclick="removePlayer()" class="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200">-</button>
+                        </div>
+                    </div>
+
+                    <div id="players-container" class="space-y-3">
+                        <!-- 玩家设置将通过JS动态添加 -->
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">平民词语</label>
+                    <input id="civilian-word" type="text" class="w-full px-3 py-2 border rounded" value="苹果">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">卧底词语</label>
+                    <input id="undercover-word" type="text" class="w-full px-3 py-2 border rounded" value="香蕉">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-1">卧底玩家编号 (逗号分隔)</label>
+                    <input id="undercover-indices" type="text" class="w-full px-3 py-2 border rounded" value="1">
+                    <p class="text-xs text-gray-500 mt-1">例如: 1,3 表示玩家1和玩家3是卧底</p>
+                </div>
+
+                <button onclick="startGame()" class="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                    开始游戏
+                </button>
+            </div>
+
+            <!-- 游戏信息面板 -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">游戏信息</h2>
+
+                <div class="mb-4 p-3 bg-gray-50 rounded">
+                    <h3 class="font-medium mb-2">当前轮次: <span id="current-round" class="font-bold">0</span></h3>
+                    <div id="game-status" class="text-sm text-gray-600">游戏未开始</div>
+                </div>
+
+                <div class="mb-4">
+                    <h3 class="font-medium mb-2">玩家状态</h3>
+                    <div id="players-status" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                        <!-- 玩家状态将通过JS动态更新 -->
+                        <div class="text-center py-4 text-gray-400">暂无玩家信息</div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-medium mb-2">词语信息</h3>
+                    <div class="text-sm space-y-1">
+                        <p>平民词语: <span id="civilian-word-display" class="font-medium bg-blue-50 px-2 py-1 rounded">-</span></p>
+                        <p>卧底词语: <span id="undercover-word-display" class="font-medium bg-red-50 px-2 py-1 rounded">-</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 游戏对话面板 -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">游戏对话</h2>
+
+                <div id="chat-container" class="resizable custom-scrollbar h-96 overflow-y-auto mb-4 space-y-3 p-2 border rounded bg-gray-50">
+                    <!-- 对话内容将通过SSE动态添加 -->
+                    <div class="text-center py-8 text-gray-400">游戏开始后，对话将显示在这里</div>
+                </div>
+
+                <div class="text-sm text-gray-500 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>游戏将自动进行，观察AI们的推理过程...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 可用模型列表
+        const availableModels = JSON.parse('{{ models|tojson }}');
+        let playerCount = 3;
+        let playerModels = {}; // 保存所有玩家的模型选择
+
+        // 初始化玩家设置
+        function initPlayerSettings() {
+            const container = document.getElementById('players-container');
+            container.innerHTML = '';
+
+            // 初始化模型选择
+            for (let i = 1; i <= playerCount; i++) {
+                if (!playerModels[i]) {
+                    playerModels[i] = availableModels[0]; // 默认第一个模型
+                }
+            }
+
+            // 创建玩家设置项
+            for (let i = 1; i <= playerCount; i++) {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'flex items-center space-x-2';
+                playerDiv.innerHTML = `
+                    <span class="w-8 text-sm">玩家 ${i}:</span>
+                    <select class="flex-1 px-2 py-1 border rounded" id="player-${i}-model"
+                            onchange="playerModels[${i}] = this.value">
+                        ${availableModels.map(m =>
+                            `<option value="${m}" ${playerModels[i] === m ? 'selected' : ''}>${m}</option>`
+                        ).join('')}
+                    </select>
+                `;
+                container.appendChild(playerDiv);
+            }
+        }
+
+        // 增加玩家
+        function addPlayer() {
+            if (playerCount < 8) {
+                playerCount++;
+                // 为新玩家设置默认模型
+                playerModels[playerCount] = availableModels[0];
+                initPlayerSettings();
+            } else {
+                alert('最多支持8名玩家');
+            }
+        }
+
+        // 减少玩家
+        function removePlayer() {
+            if (playerCount > 3) {
+                // 删除最后一个玩家的模型选择
+                delete playerModels[playerCount];
+                playerCount--;
+                initPlayerSettings();
+            } else {
+                alert('最少需要3名玩家');
+            }
+        }
+
+        // 开始游戏
+        function startGame() {
+            // 从playerModels对象构建数组
+            const modelsArray = [];
+            for (let i = 1; i <= playerCount; i++) {
+                modelsArray.push(playerModels[i]);
+            }
+
+            const civilianWord = document.getElementById('civilian-word').value.trim();
+            const undercoverWord = document.getElementById('undercover-word').value.trim();
+            const undercoverIndices = document.getElementById('undercover-indices').value
+                .split(',')
+                .map(i => i.trim())
+                .filter(i => i !== '');
+
+            if (!civilianWord || !undercoverWord) {
+                alert('请填写平民词语和卧底词语');
+                return;
+            }
+
+            if (undercoverIndices.length === 0) {
+                alert('请指定至少一名卧底');
+                return;
+            }
+
+            // 验证卧底编号是否有效
+            const invalidIndices = undercoverIndices.filter(i => {
+                const num = parseInt(i);
+                return isNaN(num) || num < 1 || num > playerCount;
+            });
+
+            if (invalidIndices.length > 0) {
+                alert(`无效的卧底编号: ${invalidIndices.join(', ')}\n请输入1-${playerCount}之间的数字`);
+                return;
+            }
+
+            fetch('/start_game', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    player_models: modelsArray,
+                    civilian_word: civilianWord,
+                    undercover_word: undercoverWord,
+                    undercover_indices: undercoverIndices
+                })
+            }).then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // 清空聊天框
+                    document.getElementById('chat-container').innerHTML = '';
+                    // 开始监听事件流
+                    listenToGameEvents();
+                    // 开始轮询游戏状态
+                    pollGameStatus();
+                }
+            });
+        }
+
+        // 监听游戏事件
+        function listenToGameEvents() {
+            const eventSource = new EventSource('/stream');
+            const chatContainer = document.getElementById('chat-container');
+
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'player-bubble';
+
+                if (data.type === 'system') {
+                    messageDiv.innerHTML = `
+                        <div class="text-sm text-gray-500 px-3 py-1 bg-gray-100 rounded inline-block">
+                            ${data.content}
+                        </div>
+                    `;
+                } else {
+                    const player = data.player_id;
+                    const model = data.model;
+                    messageDiv.innerHTML = `
+                        <div class="flex items-start space-x-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-sm font-medium">
+                                ${player}
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-xs text-gray-500 mb-1">
+                                    ${model}
+                                </div>
+                                <div class="px-3 py-2 bg-blue-50 rounded-lg">
+                                    ${data.content}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                chatContainer.appendChild(messageDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            };
+
+            eventSource.onerror = function() {
+                eventSource.close();
+            };
+        }
+
+        // 轮询游戏状态
+        function pollGameStatus() {
+            function updateStatus() {
+                fetch('/game_status')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('current-round').textContent = data.current_round;
+                        document.getElementById('civilian-word-display').textContent = data.civilian_word;
+                        document.getElementById('undercover-word-display').textContent = data.undercover_word;
+
+                        // 更新玩家状态
+                        const playersStatus = document.getElementById('players-status');
+                        playersStatus.innerHTML = '';
+
+                        if (data.players.length === 0) {
+                            playersStatus.innerHTML = '<div class="text-center py-4 text-gray-400">暂无玩家信息</div>';
+                            return;
+                        }
+
+                        data.players.forEach(player => {
+                            const playerDiv = document.createElement('div');
+                            playerDiv.className = `flex justify-between items-center p-2 rounded ${
+                                player.alive ? 'bg-green-50' : 'bg-gray-100'
+                            } ${player.role === 'undercover' ? 'border-l-4 border-red-500' : 'border-l-4 border-blue-500'}`;
+                            playerDiv.innerHTML = `
+                                <div class="flex items-center space-x-2">
+                                    <span class="font-medium">玩家 ${player.id}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded ${
+                                        player.role === 'undercover' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                    }">${player.role === 'undercover' ? '卧底' : '平民'}</span>
+                                </div>
+                                <div class="text-xs space-x-2">
+                                    <span class="text-gray-500">${player.model}</span>
+                                    <span class="font-medium">票数: ${player.votes_received}</span>
+                                </div>
+                            `;
+                            playersStatus.appendChild(playerDiv);
+                        });
+
+                        // 更新游戏状态文本
+                        const gameStatus = document.getElementById('game-status');
+                        if (data.game_over) {
+                            gameStatus.textContent = '游戏已结束';
+                            gameStatus.className = 'text-sm text-red-600 font-medium';
+                        } else if (data.current_round > 0) {
+                            gameStatus.textContent = '游戏进行中';
+                            gameStatus.className = 'text-sm text-green-600 font-medium';
+                        } else {
+                            gameStatus.textContent = '游戏未开始';
+                            gameStatus.className = 'text-sm text-gray-600';
+                        }
+
+                        if (!data.game_over) {
+                            setTimeout(updateStatus, 1000);
+                        }
+                    });
+            }
+
+            updateStatus();
+        }
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化所有玩家的模型选择
+            for (let i = 1; i <= playerCount; i++) {
+                playerModels[i] = availableModels[0];
+            }
+            initPlayerSettings();
+        });
+    </script>
+</body>
+</html>
