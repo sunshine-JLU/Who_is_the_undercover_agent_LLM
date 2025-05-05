@@ -22,8 +22,6 @@ Follow these steps to get started quickly:
    ```bash
    python main.py # run the server and click the http://127.0.0.1:5000 
    
-  Open and run the deepseek-janus-pro-lora.ipynb notebook to start fine-tuning the model.
-  Open and run the janus-pro-lora-inference.ipynb notebook to evaluate the model.
 
 
 
