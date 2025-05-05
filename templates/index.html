@@ -13,13 +13,11 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        /* 可调整大小的对话框 */
         .resizable {
             resize: vertical;
             overflow: auto;
             min-height: 200px;
         }
-        /* 自定义滚动条 */
         .custom-scrollbar::-webkit-scrollbar {
             width: 8px;
         }
@@ -92,7 +90,6 @@
                 <div class="mb-4">
                     <h3 class="font-medium mb-2">玩家状态</h3>
                     <div id="players-status" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
-                        <!-- 玩家状态将通过JS动态更新 -->
                         <div class="text-center py-4 text-gray-400">暂无玩家信息</div>
                     </div>
                 </div>
@@ -111,7 +108,6 @@
                 <h2 class="text-xl font-semibold mb-4">游戏对话</h2>
 
                 <div id="chat-container" class="resizable custom-scrollbar h-96 overflow-y-auto mb-4 space-y-3 p-2 border rounded bg-gray-50">
-                    <!-- 对话内容将通过SSE动态添加 -->
                     <div class="text-center py-8 text-gray-400">游戏开始后，对话将显示在这里</div>
                 </div>
 
@@ -126,24 +122,21 @@
     </div>
 
     <script>
-        // 可用模型列表
         const availableModels = JSON.parse('{{ models|tojson }}');
         let playerCount = 3;
-        let playerModels = {}; // 保存所有玩家的模型选择
+        let playerModels = {};
+        let gameInitialized = false;
 
-        // 初始化玩家设置
         function initPlayerSettings() {
             const container = document.getElementById('players-container');
             container.innerHTML = '';
 
-            // 初始化模型选择
             for (let i = 1; i <= playerCount; i++) {
                 if (!playerModels[i]) {
-                    playerModels[i] = availableModels[0]; // 默认第一个模型
+                    playerModels[i] = availableModels[0];
                 }
             }
 
-            // 创建玩家设置项
             for (let i = 1; i <= playerCount; i++) {
                 const playerDiv = document.createElement('div');
                 playerDiv.className = 'flex items-center space-x-2';
@@ -160,11 +153,9 @@
             }
         }
 
-        // 增加玩家
         function addPlayer() {
             if (playerCount < 8) {
                 playerCount++;
-                // 为新玩家设置默认模型
                 playerModels[playerCount] = availableModels[0];
                 initPlayerSettings();
             } else {
@@ -172,10 +163,8 @@
             }
         }
 
-        // 减少玩家
         function removePlayer() {
             if (playerCount > 3) {
-                // 删除最后一个玩家的模型选择
                 delete playerModels[playerCount];
                 playerCount--;
                 initPlayerSettings();
@@ -184,9 +173,7 @@
             }
         }
 
-        // 开始游戏
         function startGame() {
-            // 从playerModels对象构建数组
             const modelsArray = [];
             for (let i = 1; i <= playerCount; i++) {
                 modelsArray.push(playerModels[i]);
@@ -209,7 +196,6 @@
                 return;
             }
 
-            // 验证卧底编号是否有效
             const invalidIndices = undercoverIndices.filter(i => {
                 const num = parseInt(i);
                 return isNaN(num) || num < 1 || num > playerCount;
@@ -219,6 +205,9 @@
                 alert(`无效的卧底编号: ${invalidIndices.join(', ')}\n请输入1-${playerCount}之间的数字`);
                 return;
             }
+
+            gameInitialized = false;
+            document.getElementById('chat-container').innerHTML = '';
 
             fetch('/start_game', {
                 method: 'POST',
@@ -236,23 +225,25 @@
                 if (data.error) {
                     alert(data.error);
                 } else {
-                    // 清空聊天框
-                    document.getElementById('chat-container').innerHTML = '';
-                    // 开始监听事件流
                     listenToGameEvents();
-                    // 开始轮询游戏状态
                     pollGameStatus();
                 }
             });
         }
 
-        // 监听游戏事件
         function listenToGameEvents() {
             const eventSource = new EventSource('/stream');
             const chatContainer = document.getElementById('chat-container');
 
             eventSource.onmessage = function(event) {
                 const data = JSON.parse(event.data);
+
+                // 确保游戏初始化完成后再显示消息
+                if (data.content.includes("游戏初始化完成")) {
+                    gameInitialized = true;
+                }
+
+                if (!gameInitialized && data.type === 'system') return;
 
                 const messageDiv = document.createElement('div');
                 messageDiv.className = 'player-bubble';
@@ -292,7 +283,6 @@
             };
         }
 
-        // 轮询游戏状态
         function pollGameStatus() {
             function updateStatus() {
                 fetch('/game_status')
@@ -302,7 +292,6 @@
                         document.getElementById('civilian-word-display').textContent = data.civilian_word;
                         document.getElementById('undercover-word-display').textContent = data.undercover_word;
 
-                        // 更新玩家状态
                         const playersStatus = document.getElementById('players-status');
                         playersStatus.innerHTML = '';
 
@@ -331,7 +320,6 @@
                             playersStatus.appendChild(playerDiv);
                         });
 
-                        // 更新游戏状态文本
                         const gameStatus = document.getElementById('game-status');
                         if (data.game_over) {
                             gameStatus.textContent = '游戏已结束';
@@ -353,9 +341,7 @@
             updateStatus();
         }
 
-        // 初始化页面
         document.addEventListener('DOMContentLoaded', () => {
-            // 初始化所有玩家的模型选择
             for (let i = 1; i <= playerCount; i++) {
                 playerModels[i] = availableModels[0];
             }
