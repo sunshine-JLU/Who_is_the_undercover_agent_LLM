@@ -1,3 +1,9 @@
+## Game effect
+![image](https://github.com/user-attachments/assets/7aafedbd-f25d-4a49-82bd-7177b875ffb6)
+
+
+
+
 ## Quick Start
 
 Follow these steps to get started quickly:
